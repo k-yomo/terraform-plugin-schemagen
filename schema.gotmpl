@@ -1,0 +1,53 @@
+type {{ .ResourceName }} struct {
+    d *schema.ResourceData
+}
+
+func New{{ .ResourceName }}(d *schema.ResourceData) *{{ .ResourceName }} {
+    return &{{ .ResourceName }}{d: d}
+}
+
+{{ range .Attributes }}
+{{ if .Deprecated -}}
+// Deprecated: {{ .Name }} is deprecated
+{{ end -}}
+func ({{ $.ReceiverName }} {{ $.ResourceName }}) {{ .Name | ToUpperCamel }}() (v {{ .AttributeType | CityTypeToGoTypeString }}, ok bool) {
+    vInterface, ok := {{ $.ReceiverName }}.d.GetOk("{{ .Name }}")
+    if !ok {
+      return
+    }
+    {{ if .AttributeType.IsListType -}}
+    var listValues []{{ .AttributeType.ListElementType | CityTypeToGoTypeString }}
+    for _, v := range vInterface.([]interface{}) {
+        listValues = append(listValues, v.({{ .AttributeType.ListElementType | CityTypeToGoTypeString }}))
+    }
+    return listValues, true
+    {{ else if .AttributeType.IsSetType -}}
+    var setValues []{{ .AttributeType.SetElementType | CityTypeToGoTypeString }}
+    for _, v := range vInterface.(*schema.Set).List() {
+        setValues = append(setValues, v.({{ .AttributeType.SetElementType | CityTypeToGoTypeString }}))
+    }
+    return setValues, true
+    {{ else -}}
+        return vInterface.({{ .AttributeType | CityTypeToGoTypeString }}), true
+    {{ end -}}
+}
+
+func ({{ $.ReceiverName }} {{ $.ResourceName }}) Must{{ .Name | ToUpperCamel }}() {{ .AttributeType | CityTypeToGoTypeString }} {
+    vInterface, _ := {{ $.ReceiverName }}.d.GetOk("{{ .Name }}")
+    {{ if .AttributeType.IsListType -}}
+    var listValues []{{ .AttributeType.ListElementType | CityTypeToGoTypeString }}
+    for _, v := range vInterface.([]interface{}) {
+        listValues = append(listValues, v.({{ .AttributeType.ListElementType | CityTypeToGoTypeString }}))
+    }
+    return listValues, true
+    {{ else if .AttributeType.IsSetType -}}
+    var setValues []{{ .AttributeType.SetElementType | CityTypeToGoTypeString }}
+    for _, v := range vInterface.(*schema.Set).List() {
+        setValues = append(setValues, v.({{ .AttributeType.SetElementType | CityTypeToGoTypeString }}))
+    }
+    return setValues
+    {{ else -}}
+        return vInterface.({{ .AttributeType | CityTypeToGoTypeString }})
+    {{ end -}}
+}
+{{ end -}}
